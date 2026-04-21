@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete — EduVerse{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-container page-container-narrow">
+        <div class="confirm-delete-card glass-card fade-in-up">
+            <div class="confirm-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1>Confirm Deletion</h1>
+            <p class="confirm-text">
+                Are you sure you want to delete
+                {% if lesson %}
+                    the lesson "<strong>{{ lesson.title }}</strong>"?
+                {% elif module %}
+                    the module "<strong>{{ module.title }}</strong>" and all its lessons?
+                {% else %}
+                    the course "<strong>{{ course.title }}</strong>" and all its content?
+                {% endif %}
+            </p>
+            <p class="confirm-warning">This action cannot be undone.</p>
+            <div class="confirm-actions">
+                <form method="POST" id="confirm-delete-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" id="confirm-delete-btn">
+                        <i class="fas fa-trash"></i> Yes, Delete
+                    </button>
+                </form>
+                <a href="{% url 'manage_course' slug=course.slug %}" class="btn btn-outline">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
