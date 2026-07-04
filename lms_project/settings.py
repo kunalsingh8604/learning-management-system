@@ -5,10 +5,12 @@ Django settings for lms_project project.
 import os
 from pathlib import Path
 
+from lms_project.database import build_databases, is_persistent, resolve_database_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env locally (optional — for testing with remote Postgres before deploying)
+# Load .env locally (optional — test production Postgres before deploying)
 if not os.environ.get('VERCEL'):
     try:
         from dotenv import load_dotenv
@@ -17,52 +19,8 @@ if not os.environ.get('VERCEL'):
         pass
 
 IS_VERCEL = bool(os.environ.get('VERCEL'))
-
-
-def _database_url():
-    """Support Supabase, Vercel Postgres, Railway, Render, and other PostgreSQL hosts."""
-    for key in (
-        'DATABASE_URL',
-        'SUPABASE_DATABASE_URL',
-        'POSTGRES_URL',
-        'POSTGRES_URL_NON_POOLING',
-    ):
-        value = os.environ.get(key, '').strip()
-        if value:
-            # Django/psycopg expect postgresql:// not postgres://
-            if value.startswith('postgres://'):
-                value = 'postgresql://' + value[len('postgres://'):]
-            return value
-    return None
-
-
-def _csrf_trusted_origins():
-    """Include this deployment's Vercel URLs automatically."""
-    origins = set()
-
-    for env_key in (
-        'VERCEL_PROJECT_PRODUCTION_URL',
-        'VERCEL_URL',
-        'VERCEL_BRANCH_URL',
-    ):
-        host = os.environ.get(env_key, '').strip()
-        if host:
-            origins.add(f'https://{host}')
-
-    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(','):
-        origin = origin.strip()
-        if origin:
-            origins.add(origin)
-
-    origins.update({
-        'https://learning-management-system-theta-blush.vercel.app',
-        'https://learning-management-system-efy4.vercel.app',
-    })
-    return sorted(origins)
-
-
-DATABASE_URL = _database_url()
-PERSISTENT_DATABASE = bool(DATABASE_URL)
+DATABASE_URL = resolve_database_url()
+PERSISTENT_DATABASE = is_persistent()
 
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
@@ -124,32 +82,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'lms_project.wsgi.application'
 
-# Database — PostgreSQL on Vercel (required for real accounts)
-if DATABASE_URL:
-    import dj_database_url
-
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=0,
-            conn_health_checks=True,
-            ssl_require='sslmode=disable' not in DATABASE_URL,
-        )
-    }
-elif IS_VERCEL:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3',
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+# Database — PostgreSQL via DATABASE_URL on Vercel (persists across redeploys)
+DATABASES = build_databases(base_dir=BASE_DIR, is_vercel=IS_VERCEL)
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -185,4 +119,20 @@ if IS_VERCEL and PERSISTENT_DATABASE:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-CSRF_TRUSTED_ORIGINS = _csrf_trusted_origins()
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://learning-management-system-theta-blush.vercel.app,'
+        'https://learning-management-system-efy4.vercel.app',
+    ).split(',')
+    if origin.strip()
+]
+
+# Auto-add current Vercel deployment URLs for CSRF
+for env_key in ('VERCEL_PROJECT_PRODUCTION_URL', 'VERCEL_URL', 'VERCEL_BRANCH_URL'):
+    host = os.environ.get(env_key, '').strip()
+    if host:
+        origin = f'https://{host}'
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)

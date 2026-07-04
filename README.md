@@ -1,72 +1,77 @@
 # Learning Management System
 
-Django LMS with student and instructor roles.
+Django LMS deployed on Vercel with PostgreSQL for persistent user accounts.
 
-## Local development
+## Production database setup
+
+Vercel serverless cannot use SQLite for production — `/tmp` SQLite resets and is not shared
+between instances. Use **PostgreSQL** via `DATABASE_URL`.
+
+### 1. Create a PostgreSQL database (Supabase — free)
+
+1. Sign up at [supabase.com](https://supabase.com)
+2. **New project** → set a database password
+3. **Project Settings → Database → Connection string → URI**
+4. Choose **Session pooler** (port `6543`)
+5. Copy the URI and replace `[YOUR-PASSWORD]`
+
+### 2. Set environment variables in Vercel
+
+1. Open [vercel.com/dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** (top navigation)
+4. Click **Environment Variables** (left sidebar)
+5. Add each variable below
+6. Select **Production**, **Preview**, and **Development** environments
+7. Click **Save**
+8. Go to **Deployments** → latest deployment → **Redeploy**
+
+| Variable | Value | Required |
+|----------|-------|----------|
+| `DATABASE_URL` | PostgreSQL connection string from Supabase | Yes |
+| `ADMIN_PASSWORD` | Superuser password | Yes |
+| `ADMIN_USERNAME` | Superuser username | Yes |
+| `ADMIN_EMAIL` | Superuser email | Yes |
+| `SECRET_KEY` | Long random string | Yes |
+| `DEBUG` | `False` | Yes |
+| `CSRF_TRUSTED_ORIGINS` | `https://your-app.vercel.app` | Yes |
+
+### 3. Run setup locally (optional)
+
+Test against your Supabase database before deploying:
+
+```powershell
+# Windows PowerShell
+$env:DATABASE_URL="postgresql://postgres.xxx:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres"
+$env:ADMIN_PASSWORD="your-secure-password"
+python manage.py setup_production --username admin --email admin@example.com --demo
+```
+
+### 4. Deploy
+
+Push to GitHub or redeploy on Vercel. On each cold start the app will:
+
+- Run `migrate` against PostgreSQL
+- Create/update the superuser from env vars
+- Load demo courses if the database is empty
+
+Registered users and login sessions **persist across redeploys** because data lives in PostgreSQL.
+
+## Local development (SQLite)
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py populate_demo  # optional demo data
 python manage.py runserver
 ```
 
-Without `DATABASE_URL`, local development uses SQLite (`db.sqlite3`).
-
-## Vercel deployment (required for login to work)
-
-Vercel is **serverless**. Each request can run on a different machine, so **SQLite cannot store user accounts permanently**. You must connect a **PostgreSQL** database.
-
-### 1. Create free PostgreSQL (Supabase)
-
-1. Sign up at [https://supabase.com](https://supabase.com)
-2. Create a new project
-3. Go to **Project Settings → Database**
-4. Under **Connection string**, choose **URI** and copy the string (use **Session pooler** mode)
-5. Replace `[YOUR-PASSWORD]` with your database password
-
-Example:
-`postgresql://postgres.xxxxx:password@aws-0-ap-south-1.pooler.supabase.com:6543/postgres`
-
-### 2. Add Vercel environment variables
-
-In Vercel → your project → **Settings → Environment Variables**:
-
-| Name | Value |
-|------|--------|
-| `DATABASE_URL` | Supabase connection string |
-| `SECRET_KEY` | long random string |
-| `DEBUG` | `False` |
-| `CSRF_TRUSTED_ORIGINS` | `https://learning-management-system-theta-blush.vercel.app` |
-
-Optional admin account (created automatically on deploy):
-
-| Name | Value |
-|------|--------|
-| `ADMIN_USERNAME` | your username |
-| `ADMIN_PASSWORD` | your password |
-| `ADMIN_EMAIL` | your email |
-
-### 3. Redeploy
-
-Push to GitHub or click **Redeploy** in Vercel. Migrations run automatically on startup.
-
-### 4. Test sign-up and login
-
-1. Open your Vercel site
-2. Register as Student or Instructor
-3. Log out
-4. Log in again with the same username and password
-
-See `.env.example` for all supported variables.
+Without `DATABASE_URL`, local dev uses `db.sqlite3`.
 
 ## Other PostgreSQL providers
 
-Any PostgreSQL host works — set `DATABASE_URL` to your connection string:
+Any provider works — set `DATABASE_URL`:
 
-- [Supabase](https://supabase.com) (recommended, free)
-- [Vercel Postgres](https://vercel.com/storage/postgres) (uses `POSTGRES_URL` automatically)
+- [Supabase](https://supabase.com)
+- [Vercel Postgres](https://vercel.com/storage/postgres) (auto-sets `POSTGRES_URL`)
 - [Railway](https://railway.app)
 - [Render](https://render.com)
