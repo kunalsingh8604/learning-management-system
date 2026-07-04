@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }} — EduVerse{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-container">
+        <!-- Course Hero -->
+        <div class="course-hero glass-card fade-in-up">
+            <div class="course-hero-content">
+                <div class="course-hero-info">
+                    <div class="course-badges">
+                        <span class="badge badge-{{ course.level }}">{{ course.get_level_display }}</span>
+                        <span class="badge badge-category">{{ course.get_category_display }}</span>
+                    </div>
+                    <h1>{{ course.title }}</h1>
+                    <p class="course-description">{{ course.description }}</p>
+                    <div class="course-meta-detail">
+                        <span><i class="fas fa-user"></i> By {{ course.instructor.get_full_name|default:course.instructor.username }}</span>
+                        <span><i class="fas fa-calendar"></i> {{ course.created_at|date:"M d, Y" }}</span>
+                        <span><i class="fas fa-users"></i> {{ course.enrolled_count }} students</span>
+                        <span><i class="fas fa-layer-group"></i> {{ course.total_modules }} modules</span>
+                        <span><i class="fas fa-play-circle"></i> {{ course.total_lessons }} lessons</span>
+                    </div>
+                    <div class="course-rating-detail">
+                        {% if course.average_rating %}
+                            <span class="rating-stars-lg">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= course.average_rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="rating-value-lg">{{ course.average_rating }} / 5</span>
+                            <span class="rating-count">({{ course.reviews.count }} reviews)</span>
+                        {% else %}
+                            <span class="rating-new">No reviews yet</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="course-actions">
+                        {% if user.is_authenticated %}
+                            {% if is_enrolled %}
+                                <div class="alert-box success">
+                                    <i class="fas fa-check-circle"></i> You are already enrolled in this course.
+                                </div>
+                                {% if enrollment.is_completed %}
+                                    <a href="{% url 'certificate' slug=course.slug %}" class="btn btn-success btn-lg">
+                                        <i class="fas fa-certificate"></i> View Certificate
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'unenroll' slug=course.slug %}" class="btn btn-outline btn-sm">
+                                    <i class="fas fa-times"></i> Unenroll
+                                </a>
+                            {% elif user.is_student %}
+                                <a href="{% url 'enroll' slug=course.slug %}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-plus-circle"></i> Enroll Now
+                                    {% if course.price > 0 %} — ₹{{ course.price }}{% else %} — Free{% endif %}
+                                </a>
+                            {% endif %}
+                            {% if user == course.instructor %}
+                                <a href="{% url 'manage_course' slug=course.slug %}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-cog"></i> Manage Course
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'login' %}?next={% url 'course_detail' slug=course.slug %}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Login to Enroll
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    {% if is_enrolled %}
+                    <div class="enrollment-progress">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%;"></div>
+                            </div>
+                            <span class="progress-text">{{ enrollment.progress_percentage }}% complete ({{ enrollment.completed_lessons_count }}/{{ course.total_lessons }} lessons)</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="course-hero-thumb">
+                    {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}">
+                    {% else %}
+                        <div class="course-thumbnail-placeholder large">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Content (Modules & Lessons) -->
+        <div class="course-content-section fade-in-up">
+            <h2><i class="fas fa-list"></i> Course Content</h2>
+
+            {% if modules %}
+            <div class="modules-list">
+                {% for module in modules %}
+                <div class="module-card glass-card">
+                    <div class="module-header" onclick="toggleModule(this)">
+                        <div class="module-title">
+                            <i class="fas fa-chevron-right module-chevron"></i>
+                            <h3>Module {{ forloop.counter }}: {{ module.title }}</h3>
+                        </div>
+                        <span class="module-count">{{ module.lessons.count }} lessons</span>
+                    </div>
+                    <div class="module-lessons">
+                        {% for lesson in module.lessons.all %}
+                        <div class="lesson-item">
+                            <div class="lesson-info">
+                                <i class="fas fa-play-circle lesson-icon"></i>
+                                {% if is_enrolled %}
+                                    <a href="{% url 'lesson_view' slug=course.slug lesson_id=lesson.id %}">
+                                        {{ lesson.title }}
+                                    </a>
+                                {% else %}
+                                    <span>{{ lesson.title }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="lesson-meta">
+                                {% if lesson.duration_minutes %}
+                                    <span><i class="fas fa-clock"></i> {{ lesson.duration_minutes }} min</span>
+                                {% endif %}
+                                {% if lesson.video_url %}
+                                    <span class="lesson-type"><i class="fas fa-video"></i></span>
+                                {% elif lesson.file %}
+                                    <span class="lesson-type"><i class="fas fa-file"></i></span>
+                                {% else %}
+                                    <span class="lesson-type"><i class="fas fa-file-alt"></i></span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state glass-card">
+                <i class="fas fa-folder-open"></i>
+                <h3>No content yet</h3>
+                <p>This course doesn't have any modules or lessons yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="reviews-section fade-in-up">
+            <h2><i class="fas fa-star"></i> Student Reviews</h2>
+
+            {% if is_enrolled %}
+            <div class="review-form-card glass-card">
+                <h3>{% if user_review %}Update Your Review{% else %}Leave a Review{% endif %}</h3>
+                <form method="POST" id="review-form">
+                    {% csrf_token %}
+                    {% for field in review_form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" name="submit_review" class="btn btn-primary" id="review-submit">
+                        <i class="fas fa-paper-plane"></i> {% if user_review %}Update Review{% else %}Submit Review{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if reviews %}
+            <div class="reviews-list">
+                {% for review in reviews %}
+                <div class="review-card glass-card">
+                    <div class="review-header">
+                        <div class="review-author">
+                            <div class="review-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <strong>{{ review.student.get_full_name|default:review.student.username }}</strong>
+                                <span class="review-date">{{ review.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="review-rating">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if review.comment %}
+                    <p class="review-comment">{{ review.comment }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state glass-card">
+                <i class="fas fa-star"></i>
+                <h3>No reviews yet</h3>
+                <p>Be the first to review this course!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% block extra_js %}
+<script>
+function toggleModule(header) {
+    const card = header.closest('.module-card');
+    card.classList.toggle('module-open');
+}
+</script>
+{% endblock %}
+{% endblock %}

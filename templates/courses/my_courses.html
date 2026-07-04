@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}My Courses — EduVerse{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-container">
+        <div class="page-header fade-in-up">
+            <h1><i class="fas fa-bookmark"></i> My Courses</h1>
+            <p>Continue learning where you left off</p>
+        </div>
+
+        {% if enrollments %}
+        <div class="enrolled-courses-grid fade-in-up">
+            {% for enrollment in enrollments %}
+            <div class="enrolled-card glass-card">
+                <div class="enrolled-card-header">
+                    {% if enrollment.course.thumbnail %}
+                        <img src="{{ enrollment.course.thumbnail.url }}" alt="{{ enrollment.course.title }}">
+                    {% else %}
+                        <div class="course-thumbnail-placeholder small">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="enrolled-card-body">
+                    <h3><a href="{% url 'course_detail' slug=enrollment.course.slug %}">{{ enrollment.course.title }}</a></h3>
+                    <p class="enrolled-instructor">
+                        <i class="fas fa-user"></i>
+                        {{ enrollment.course.instructor.get_full_name|default:enrollment.course.instructor.username }}
+                    </p>
+                    <p class="enrolled-date">
+                        <i class="fas fa-calendar"></i> Enrolled {{ enrollment.enrolled_at|date:"M d, Y" }}
+                    </p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ enrollment.progress_percentage }}%;"></div>
+                        </div>
+                        <span class="progress-text">{{ enrollment.progress_percentage }}% complete</span>
+                    </div>
+                    <div class="enrolled-card-actions">
+                        {% if enrollment.is_completed %}
+                            <a href="{% url 'certificate' slug=enrollment.course.slug %}" class="btn btn-success btn-sm">
+                                <i class="fas fa-certificate"></i> Certificate
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'course_detail' slug=enrollment.course.slug %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-play"></i> Continue
+                        </a>
+                        <a href="{% url 'unenroll' slug=enrollment.course.slug %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-times"></i> Unenroll
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state glass-card fade-in-up">
+            <i class="fas fa-book-open"></i>
+            <h3>No courses enrolled</h3>
+            <p>Start learning by enrolling in courses from our catalog!</p>
+            <a href="{% url 'catalog' %}" class="btn btn-primary">
+                <i class="fas fa-compass"></i> Explore Courses
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

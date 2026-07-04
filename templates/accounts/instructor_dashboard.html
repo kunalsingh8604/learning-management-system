@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Instructor Dashboard — EduVerse{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-container">
+        <div class="page-header fade-in-up">
+            <h1><i class="fas fa-chalkboard-teacher"></i> Instructor Dashboard</h1>
+            <p>Welcome back, {{ user.first_name|default:user.username }}!</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid fade-in-up">
+            <div class="stat-card glass-card">
+                <div class="stat-card-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-card-info">
+                    <span class="stat-card-number">{{ total_courses }}</span>
+                    <span class="stat-card-label">My Courses</span>
+                </div>
+            </div>
+            <div class="stat-card glass-card">
+                <div class="stat-card-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-card-info">
+                    <span class="stat-card-number">{{ total_students }}</span>
+                    <span class="stat-card-label">Total Students</span>
+                </div>
+            </div>
+            <div class="stat-card glass-card">
+                <div class="stat-card-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-card-info">
+                    <span class="stat-card-number">{{ user.reviews.count|default:"0" }}</span>
+                    <span class="stat-card-label">Reviews</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar fade-in-up">
+            <a href="{% url 'create_course' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Course
+            </a>
+        </div>
+
+        <!-- My Courses -->
+        <div class="dashboard-section fade-in-up">
+            <h2><i class="fas fa-folder-open"></i> My Courses</h2>
+
+            {% if courses %}
+            <div class="instructor-courses-list">
+                {% for course in courses %}
+                <div class="instructor-course-card glass-card">
+                    <div class="instructor-course-info">
+                        <div class="instructor-course-thumb">
+                            {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}">
+                            {% else %}
+                                <div class="course-thumbnail-placeholder small">
+                                    <i class="fas fa-book-open"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="instructor-course-details">
+                            <h3><a href="{% url 'course_detail' slug=course.slug %}">{{ course.title }}</a></h3>
+                            <div class="course-meta-inline">
+                                <span class="badge badge-{{ course.level }}">{{ course.get_level_display }}</span>
+                                <span><i class="fas fa-users"></i> {{ course.enrolled_count }} students</span>
+                                <span><i class="fas fa-layer-group"></i> {{ course.total_modules }} modules</span>
+                                <span><i class="fas fa-play-circle"></i> {{ course.total_lessons }} lessons</span>
+                                {% if course.is_published %}
+                                    <span class="badge badge-published"><i class="fas fa-check"></i> Published</span>
+                                {% else %}
+                                    <span class="badge badge-draft"><i class="fas fa-edit"></i> Draft</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="instructor-course-actions">
+                        <a href="{% url 'manage_course' slug=course.slug %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-cog"></i> Manage
+                        </a>
+                        <a href="{% url 'edit_course' slug=course.slug %}" class="btn btn-outline btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'delete_course' slug=course.slug %}" class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state glass-card">
+                <i class="fas fa-chalkboard"></i>
+                <h3>No courses created yet</h3>
+                <p>Start creating engaging courses for learners worldwide!</p>
+                <a href="{% url 'create_course' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Your First Course
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile — EduVerse{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-container">
+        <div class="page-header fade-in-up">
+            <h1><i class="fas fa-user-edit"></i> My Profile</h1>
+            <p>Update your personal information</p>
+        </div>
+
+        <div class="profile-card glass-card fade-in-up">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {% if user.profile_image %}
+                        <img src="{{ user.profile_image.url }}" alt="{{ user.username }}">
+                    {% else %}
+                        <div class="avatar-placeholder">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="profile-info">
+                    <h2>{{ user.get_full_name|default:user.username }}</h2>
+                    <span class="role-badge role-{{ user.role }}">
+                        <i class="fas fa-{% if user.is_instructor %}chalkboard-teacher{% else %}user-graduate{% endif %}"></i>
+                        {{ user.get_role_display }}
+                    </span>
+                    <p class="profile-email"><i class="fas fa-envelope"></i> {{ user.email }}</p>
+                </div>
+            </div>
+
+            {% if user.is_student and enrollments %}
+            <div class="profile-section">
+                <h3><i class="fas fa-graduation-cap"></i> My Enrolled Courses</h3>
+                <div class="courses-grid">
+                    {% for enrollment in enrollments %}
+                    <div class="course-card glass-card">
+                        <div class="course-card-body">
+                            <h4><a href="{% url 'course_detail' slug=enrollment.course.slug %}">{{ enrollment.course.title }}</a></h4>
+                            <p class="course-excerpt">{{ enrollment.course.description|truncatewords:20 }}</p>
+                            <div class="course-meta">
+                                <span><i class="fas fa-user"></i> {{ enrollment.course.instructor.get_full_name|default:enrollment.course.instructor.username }}</span>
+                                <span><i class="fas fa-play-circle"></i> {{ enrollment.course.total_lessons }} lessons</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif user.is_student %}
+            <div class="empty-state glass-card">
+                <i class="fas fa-book-open"></i>
+                <h3>No enrolled courses yet</h3>
+                <p>Browse the catalog and enroll in a course to see it here.</p>
+            </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="profile-form" id="profile-form">
+                {% csrf_token %}
+                <div class="form-grid">
+                    {% for field in form %}
+                    <div class="form-group {% if field.name == 'bio' %}form-group-full{% endif %}">
+                        <label for="{{ field.id_for_label }}" class="form-label">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="form-error">
+                            {% for error in field.errors %}
+                                <span><i class="fas fa-exclamation-circle"></i> {{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="profile-submit">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
