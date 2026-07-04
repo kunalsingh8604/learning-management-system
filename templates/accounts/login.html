@@ -24,6 +24,20 @@
             </div>
             {% endif %}
 
+            {% if ephemeral_db %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle"></i>
+                This site uses a temporary database on Vercel. Accounts you create may not
+                persist. For permanent login, add <strong>DATABASE_URL</strong> in Vercel.
+                {% if demo_accounts %}
+                <br><br>
+                Try demo login:
+                <strong>{{ demo_accounts.student.0 }}</strong> /
+                <strong>{{ demo_accounts.student.1 }}</strong>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <form method="POST" class="auth-form" id="login-form">
                 {% csrf_token %}
                 {% for field in form %}

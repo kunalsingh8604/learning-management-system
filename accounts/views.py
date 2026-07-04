@@ -1,15 +1,27 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+import os
+
 from .forms import StudentRegistrationForm, InstructorRegistrationForm, CustomLoginForm, ProfileUpdateForm
 from courses.models import Enrollment, Course
+
+
+def _vercel_ephemeral_db():
+    return os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL')
 
 
 def register_student(request):
     """Register a new student account."""
     if request.user.is_authenticated:
         return redirect('dashboard')
+    if _vercel_ephemeral_db():
+        messages.warning(
+            request,
+            'Accounts on this deployment are temporary. Add DATABASE_URL in Vercel '
+            'for permanent sign-up and login.',
+        )
     if request.method == 'POST':
         form = StudentRegistrationForm(request.POST)
         if form.is_valid():
@@ -29,6 +41,12 @@ def register_instructor(request):
     """Register a new instructor account."""
     if request.user.is_authenticated:
         return redirect('dashboard')
+    if _vercel_ephemeral_db():
+        messages.warning(
+            request,
+            'Accounts on this deployment are temporary. Add DATABASE_URL in Vercel '
+            'for permanent sign-up and login.',
+        )
     if request.method == 'POST':
         form = InstructorRegistrationForm(request.POST)
         if form.is_valid():
@@ -48,6 +66,14 @@ def login_view(request):
     """Log in an existing user."""
     if request.user.is_authenticated:
         return redirect('dashboard')
+
+    demo_accounts = None
+    if _vercel_ephemeral_db():
+        demo_accounts = {
+            'student': ('demo_student', 'demo1234'),
+            'instructors': ('prof_sharma', 'demo1234'),
+        }
+
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
         if form.is_valid():
@@ -58,7 +84,11 @@ def login_view(request):
             return redirect(next_url)
     else:
         form = CustomLoginForm()
-    return render(request, 'accounts/login.html', {'form': form})
+    return render(request, 'accounts/login.html', {
+        'form': form,
+        'demo_accounts': demo_accounts,
+        'ephemeral_db': _vercel_ephemeral_db(),
+    })
 
 
 def logout_view(request):
