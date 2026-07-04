@@ -87,12 +87,12 @@
             <div class="alert-content">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span>
-                    <strong>Demo mode</strong> — no database connected on Vercel yet.
-                    Accounts you create here will not save.
-                    Fix: create a free PostgreSQL database at
-                    <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>,
-                    copy the connection string, add it as <strong>DATABASE_URL</strong> in
-                    Vercel → Settings → Environment Variables, then <strong>Redeploy</strong>.
+                    <strong>Demo mode</strong> — PostgreSQL is not connected yet, so accounts
+                    will not save. To remove this: open your
+                    <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel Dashboard</a>
+                    → select this project → <strong>Storage</strong> →
+                    <strong>Create Database</strong> → <strong>Postgres</strong> (free),
+                    then click <strong>Redeploy</strong> on the latest deployment.
                 </span>
             </div>
         </div>

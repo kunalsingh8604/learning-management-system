@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import dj_database_url
 
@@ -10,8 +11,38 @@ DATABASE_URL_KEYS = (
     'DATABASE_URL',
     'SUPABASE_DATABASE_URL',
     'POSTGRES_URL',
+    'POSTGRES_PRISMA_URL',
     'POSTGRES_URL_NON_POOLING',
 )
+
+
+def _build_url_from_postgres_env() -> str | None:
+    """Build a URL from Vercel Postgres / Supabase individual env vars."""
+    host = (
+        os.environ.get('POSTGRES_HOST', '').strip()
+        or os.environ.get('PGHOST', '').strip()
+    )
+    user = (
+        os.environ.get('POSTGRES_USER', '').strip()
+        or os.environ.get('PGUSER', '').strip()
+    )
+    password = (
+        os.environ.get('POSTGRES_PASSWORD', '').strip()
+        or os.environ.get('PGPASSWORD', '').strip()
+    )
+    database = (
+        os.environ.get('POSTGRES_DATABASE', '').strip()
+        or os.environ.get('PGDATABASE', '').strip()
+    )
+    port = (
+        os.environ.get('POSTGRES_PORT', '').strip()
+        or os.environ.get('PGPORT', '5432').strip()
+    )
+
+    if host and user and password and database:
+        safe_password = quote_plus(password)
+        return f'postgresql://{user}:{safe_password}@{host}:{port}/{database}?sslmode=require'
+    return None
 
 
 def resolve_database_url() -> str | None:
@@ -20,11 +51,11 @@ def resolve_database_url() -> str | None:
         value = os.environ.get(key, '').strip()
         if not value:
             continue
-        # Django/psycopg expect postgresql:// not postgres://
         if value.startswith('postgres://'):
             value = 'postgresql://' + value[len('postgres://'):]
         return value
-    return None
+
+    return _build_url_from_postgres_env()
 
 
 def build_databases(*, base_dir: Path, is_vercel: bool) -> dict:
