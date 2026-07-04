@@ -8,6 +8,25 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+IS_VERCEL = bool(os.environ.get('VERCEL'))
+
+
+def _database_url():
+    """Support Neon, Supabase, and Vercel Postgres env var names."""
+    for key in (
+        'DATABASE_URL',
+        'POSTGRES_URL',
+        'POSTGRES_URL_NON_POOLING',
+        'NEON_DATABASE_URL',
+    ):
+        value = os.environ.get(key)
+        if value:
+            return value
+    return None
+
+
+DATABASE_URL = _database_url()
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
@@ -15,7 +34,11 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
+DEBUG = os.environ.get('DEBUG', 'False' if IS_VERCEL else 'True').lower() in (
+    '1',
+    'true',
+    'yes',
+)
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -68,26 +91,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms_project.wsgi.application'
 
 # Database
-# Prefer PostgreSQL when DATABASE_URL is set (recommended for production).
-# On Vercel the filesystem is read-only except /tmp, so SQLite must live there.
-# Locally, SQLite is stored in the project directory.
-if os.environ.get('DATABASE_URL'):
+# Vercel is serverless: user accounts must live in a shared PostgreSQL database.
+# SQLite cannot persist accounts across requests/instances.
+if DATABASE_URL:
     import dj_database_url
 
     DATABASES = {
         'default': dj_database_url.config(
+            default=DATABASE_URL,
             conn_max_age=0,
             conn_health_checks=True,
             ssl_require=True,
         )
     }
-elif os.environ.get('VERCEL'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3',
-        }
-    }
+elif IS_VERCEL:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        'DATABASE_URL is required on Vercel so sign-up and login persist. '
+        'Create a free PostgreSQL database at https://neon.tech, copy the '
+        'connection string, and add it as DATABASE_URL in Vercel → Settings → '
+        'Environment Variables, then redeploy.'
+    )
 else:
     DATABASES = {
         'default': {
@@ -114,12 +139,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Serve app static files on Vercel without a separate collectstatic step
 WHITENOISE_USE_FINDERS = True
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/tmp/media' if os.environ.get('VERCEL') else BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -135,12 +159,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Vercel / reverse-proxy HTTPS settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+if IS_VERCEL:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
         'https://learning-management-system-theta-blush.vercel.app,'
-        'https://*.vercel.app',
+        'https://learning-management-system-1cp9v4w8x.vercel.app',
     ).split(',')
     if origin.strip()
 ]

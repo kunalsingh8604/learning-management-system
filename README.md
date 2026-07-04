@@ -6,71 +6,54 @@ Django LMS with student and instructor roles.
 
 ```bash
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py populate_demo   # optional demo data
+python manage.py populate_demo  # optional demo data
 python manage.py runserver
 ```
 
-Locally the app uses SQLite (`db.sqlite3`) when `DATABASE_URL` is not set.
+Without `DATABASE_URL`, local development uses SQLite (`db.sqlite3`).
 
-## Deploy on Vercel (important)
+## Vercel deployment (required for login to work)
 
-Vercel’s filesystem is **read-only**, so **SQLite does not work** in production.
-You must use a hosted PostgreSQL database (free options: [Neon](https://neon.tech) or [Supabase](https://supabase.com)).
+Vercel is **serverless**. Each request can run on a different machine, so **SQLite cannot store user accounts permanently**. You must connect a **PostgreSQL** database.
 
-### 1. Create a free Postgres database (Neon)
+### 1. Create free PostgreSQL (Neon)
 
 1. Sign up at [https://neon.tech](https://neon.tech)
 2. Create a project
-3. Copy the connection string (looks like  
-   `postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`)
+3. Copy the connection string, for example:
+   `postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
 
-### 2. Add environment variables in Vercel
+### 2. Add Vercel environment variables
 
-In your Vercel project → **Settings → Environment Variables**, add:
+In Vercel → your project → **Settings → Environment Variables**:
 
 | Name | Value |
 |------|--------|
-| `DATABASE_URL` | Your Neon/Supabase connection string |
-| `SECRET_KEY` | A long random string (not the default insecure key) |
+| `DATABASE_URL` | Neon connection string |
+| `SECRET_KEY` | long random string |
 | `DEBUG` | `False` |
 | `CSRF_TRUSTED_ORIGINS` | `https://learning-management-system-theta-blush.vercel.app` |
 
-Redeploy after saving variables.
+Optional admin account (created automatically on deploy):
 
-### 3. Run migrations against the remote database
+| Name | Value |
+|------|--------|
+| `ADMIN_USERNAME` | your username |
+| `ADMIN_PASSWORD` | your password |
+| `ADMIN_EMAIL` | your email |
 
-On your machine (with the same `DATABASE_URL`):
+### 3. Redeploy
 
-```bash
-# Windows PowerShell
-$env:DATABASE_URL="postgresql://user:password@ep-xxx.../neondb?sslmode=require"
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py populate_demo   # optional
-```
+Push to GitHub or click **Redeploy** in Vercel. Migrations run automatically on startup.
 
-### 4. Push and redeploy
+### 4. Test sign-up and login
 
-Push these code changes to GitHub so Vercel rebuilds:
+1. Open your Vercel site
+2. Register as Student or Instructor
+3. Log out
+4. Log in again with the same username and password — it will work because the account is stored in PostgreSQL
 
-```bash
-git add .
-git commit -m "Use PostgreSQL on Vercel instead of SQLite"
-git push
-```
-
-After deploy, open https://learning-management-system-theta-blush.vercel.app/
-
-## Why the error happened
-
-`OperationalError: unable to open database file` means Django tried to open
-`/var/task/db.sqlite3` on Vercel. That path is not writable in serverless, so
-SQLite cannot create or open the file. PostgreSQL via `DATABASE_URL` fixes this.
+See `.env.example` for all supported variables.
