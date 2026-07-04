@@ -8,7 +8,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env locally (optional — for testing with Neon before deploying)
+# Load .env locally (optional — for testing with remote Postgres before deploying)
 if not os.environ.get('VERCEL'):
     try:
         from dotenv import load_dotenv
@@ -20,12 +20,12 @@ IS_VERCEL = bool(os.environ.get('VERCEL'))
 
 
 def _database_url():
-    """Support Neon, Supabase, and Vercel Postgres env var names."""
+    """Support Supabase, Vercel Postgres, Railway, Render, and other PostgreSQL hosts."""
     for key in (
         'DATABASE_URL',
+        'SUPABASE_DATABASE_URL',
         'POSTGRES_URL',
         'POSTGRES_URL_NON_POOLING',
-        'NEON_DATABASE_URL',
     ):
         value = os.environ.get(key, '').strip()
         if value:

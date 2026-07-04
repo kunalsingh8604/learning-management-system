@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = 'Run migrations and create admin user for production (Neon/Vercel Postgres)'
+    help = 'Run migrations and create admin user for production (Supabase/PostgreSQL)'
 
     def add_arguments(self, parser):
         parser.add_argument(

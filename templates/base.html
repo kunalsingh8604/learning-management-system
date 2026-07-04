@@ -89,9 +89,10 @@
                 <span>
                     <strong>Demo mode</strong> — no database connected on Vercel yet.
                     Accounts you create here will not save.
-                    Fix: Vercel Dashboard → your project → <strong>Storage</strong> →
-                    <strong>Create Database</strong> → choose <strong>Neon</strong> (free),
-                    then <strong>Redeploy</strong>.
+                    Fix: create a free PostgreSQL database at
+                    <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a>,
+                    copy the connection string, add it as <strong>DATABASE_URL</strong> in
+                    Vercel → Settings → Environment Variables, then <strong>Redeploy</strong>.
                 </span>
             </div>
         </div>

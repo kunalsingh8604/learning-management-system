@@ -19,12 +19,16 @@ Without `DATABASE_URL`, local development uses SQLite (`db.sqlite3`).
 
 Vercel is **serverless**. Each request can run on a different machine, so **SQLite cannot store user accounts permanently**. You must connect a **PostgreSQL** database.
 
-### 1. Create free PostgreSQL (Neon)
+### 1. Create free PostgreSQL (Supabase)
 
-1. Sign up at [https://neon.tech](https://neon.tech)
-2. Create a project
-3. Copy the connection string, for example:
-   `postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
+1. Sign up at [https://supabase.com](https://supabase.com)
+2. Create a new project
+3. Go to **Project Settings → Database**
+4. Under **Connection string**, choose **URI** and copy the string (use **Session pooler** mode)
+5. Replace `[YOUR-PASSWORD]` with your database password
+
+Example:
+`postgresql://postgres.xxxxx:password@aws-0-ap-south-1.pooler.supabase.com:6543/postgres`
 
 ### 2. Add Vercel environment variables
 
@@ -32,7 +36,7 @@ In Vercel → your project → **Settings → Environment Variables**:
 
 | Name | Value |
 |------|--------|
-| `DATABASE_URL` | Neon connection string |
+| `DATABASE_URL` | Supabase connection string |
 | `SECRET_KEY` | long random string |
 | `DEBUG` | `False` |
 | `CSRF_TRUSTED_ORIGINS` | `https://learning-management-system-theta-blush.vercel.app` |
@@ -54,6 +58,15 @@ Push to GitHub or click **Redeploy** in Vercel. Migrations run automatically on 
 1. Open your Vercel site
 2. Register as Student or Instructor
 3. Log out
-4. Log in again with the same username and password — it will work because the account is stored in PostgreSQL
+4. Log in again with the same username and password
 
 See `.env.example` for all supported variables.
+
+## Other PostgreSQL providers
+
+Any PostgreSQL host works — set `DATABASE_URL` to your connection string:
+
+- [Supabase](https://supabase.com) (recommended, free)
+- [Vercel Postgres](https://vercel.com/storage/postgres) (uses `POSTGRES_URL` automatically)
+- [Railway](https://railway.app)
+- [Render](https://render.com)
