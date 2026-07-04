@@ -8,6 +8,14 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env locally (optional — for testing with Neon before deploying)
+if not os.environ.get('VERCEL'):
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(BASE_DIR / '.env')
+    except ImportError:
+        pass
+
 IS_VERCEL = bool(os.environ.get('VERCEL'))
 
 
@@ -19,8 +27,11 @@ def _database_url():
         'POSTGRES_URL_NON_POOLING',
         'NEON_DATABASE_URL',
     ):
-        value = os.environ.get(key)
+        value = os.environ.get(key, '').strip()
         if value:
+            # Django/psycopg expect postgresql:// not postgres://
+            if value.startswith('postgres://'):
+                value = 'postgresql://' + value[len('postgres://'):]
             return value
     return None
 
@@ -51,17 +62,14 @@ def _csrf_trusted_origins():
 
 
 DATABASE_URL = _database_url()
-# True when PostgreSQL is connected — sign-up/login persist across visits.
 PERSISTENT_DATABASE = bool(DATABASE_URL)
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-lms-project-secret-key-change-in-production-2024',
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True' if IS_VERCEL and not PERSISTENT_DATABASE else 'False').lower() in (
+DEBUG = os.environ.get('DEBUG', 'False' if IS_VERCEL else 'True').lower() in (
     '1',
     'true',
     'yes',
@@ -73,7 +81,6 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -117,8 +124,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'lms_project.wsgi.application'
 
-# Database
-# With DATABASE_URL → PostgreSQL (accounts persist). Without it on Vercel → /tmp SQLite (demo only).
+# Database — PostgreSQL on Vercel (required for real accounts)
 if DATABASE_URL:
     import dj_database_url
 
@@ -127,7 +133,7 @@ if DATABASE_URL:
             default=DATABASE_URL,
             conn_max_age=0,
             conn_health_checks=True,
-            ssl_require=True,
+            ssl_require='sslmode=disable' not in DATABASE_URL,
         )
     }
 elif IS_VERCEL:
@@ -145,7 +151,6 @@ else:
         }
     }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -153,34 +158,27 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 WHITENOISE_USE_FINDERS = True
 
-# Media files (User uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/tmp/media' if IS_VERCEL and not PERSISTENT_DATABASE else BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-# Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# Login/Logout redirects
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/accounts/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Vercel / reverse-proxy HTTPS settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if IS_VERCEL and PERSISTENT_DATABASE:
