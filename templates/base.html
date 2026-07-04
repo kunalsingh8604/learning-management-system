@@ -81,6 +81,22 @@
     </div>
     {% endif %}
 
+    {% if is_vercel and not persistent_database %}
+    <div class="messages-container">
+        <div class="alert alert-warning fade-in">
+            <div class="alert-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>
+                    Demo mode: accounts may not persist. Add <strong>DATABASE_URL</strong>
+                    (free PostgreSQL from
+                    <a href="https://neon.tech" target="_blank" rel="noopener">neon.tech</a>)
+                    in Vercel environment variables for permanent sign-up and login.
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Main Content -->
     <main class="main-content">
         {% block content %}{% endblock %}

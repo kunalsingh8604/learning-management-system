@@ -25,7 +25,34 @@ def _database_url():
     return None
 
 
+def _csrf_trusted_origins():
+    """Include this deployment's Vercel URLs automatically."""
+    origins = set()
+
+    for env_key in (
+        'VERCEL_PROJECT_PRODUCTION_URL',
+        'VERCEL_URL',
+        'VERCEL_BRANCH_URL',
+    ):
+        host = os.environ.get(env_key, '').strip()
+        if host:
+            origins.add(f'https://{host}')
+
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(','):
+        origin = origin.strip()
+        if origin:
+            origins.add(origin)
+
+    origins.update({
+        'https://learning-management-system-theta-blush.vercel.app',
+        'https://learning-management-system-efy4.vercel.app',
+    })
+    return sorted(origins)
+
+
 DATABASE_URL = _database_url()
+# True when PostgreSQL is connected — sign-up/login persist across visits.
+PERSISTENT_DATABASE = bool(DATABASE_URL)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
@@ -34,7 +61,7 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False' if IS_VERCEL else 'True').lower() in (
+DEBUG = os.environ.get('DEBUG', 'True' if IS_VERCEL and not PERSISTENT_DATABASE else 'False').lower() in (
     '1',
     'true',
     'yes',
@@ -54,7 +81,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Custom apps
     'accounts',
     'courses',
 ]
@@ -83,6 +109,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'lms_project.context_processors.deployment',
             ],
         },
     },
@@ -91,8 +118,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms_project.wsgi.application'
 
 # Database
-# Vercel is serverless: user accounts must live in a shared PostgreSQL database.
-# SQLite cannot persist accounts across requests/instances.
+# With DATABASE_URL → PostgreSQL (accounts persist). Without it on Vercel → /tmp SQLite (demo only).
 if DATABASE_URL:
     import dj_database_url
 
@@ -105,14 +131,12 @@ if DATABASE_URL:
         )
     }
 elif IS_VERCEL:
-    from django.core.exceptions import ImproperlyConfigured
-
-    raise ImproperlyConfigured(
-        'DATABASE_URL is required on Vercel so sign-up and login persist. '
-        'Create a free PostgreSQL database at https://neon.tech, copy the '
-        'connection string, and add it as DATABASE_URL in Vercel → Settings → '
-        'Environment Variables, then redeploy.'
-    )
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/db.sqlite3',
+        }
+    }
 else:
     DATABASES = {
         'default': {
@@ -143,7 +167,7 @@ WHITENOISE_USE_FINDERS = True
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '/tmp/media' if IS_VERCEL and not PERSISTENT_DATABASE else BASE_DIR / 'media'
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
@@ -159,16 +183,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Vercel / reverse-proxy HTTPS settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-if IS_VERCEL:
+if IS_VERCEL and PERSISTENT_DATABASE:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        'CSRF_TRUSTED_ORIGINS',
-        'https://learning-management-system-theta-blush.vercel.app,'
-        'https://learning-management-system-1cp9v4w8x.vercel.app',
-    ).split(',')
-    if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = _csrf_trusted_origins()
