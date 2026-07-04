@@ -68,9 +68,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms_project.wsgi.application'
 
 # Database
-# Vercel has a read-only filesystem, so SQLite cannot be used in production.
-# Set DATABASE_URL (PostgreSQL) in Vercel environment variables.
-# Locally, SQLite is used when DATABASE_URL is not set.
+# Prefer PostgreSQL when DATABASE_URL is set (recommended for production).
+# On Vercel the filesystem is read-only except /tmp, so SQLite must live there.
+# Locally, SQLite is stored in the project directory.
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
 
@@ -80,6 +80,13 @@ if os.environ.get('DATABASE_URL'):
             conn_health_checks=True,
             ssl_require=True,
         )
+    }
+elif os.environ.get('VERCEL'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/db.sqlite3',
+        }
     }
 else:
     DATABASES = {
@@ -112,7 +119,7 @@ WHITENOISE_USE_FINDERS = True
 
 # Media files (User uploads)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = '/tmp/media' if os.environ.get('VERCEL') else BASE_DIR / 'media'
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.CustomUser'
